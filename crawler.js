@@ -2,9 +2,11 @@ var request = require('request');
 var cheerio = require('cheerio');
 var URL = require('url-parse');
 
-var START_URL = "https://en.wikipedia.org/wiki/Web_crawler";
+var arguments = process.argv;
+// var START_URL = "https://en.wikipedia.org/wiki/Web_crawler";
+var START_URL = arguments[2];
 var SEARCH_WORD = "crawler";
-var MAX_PAGES_TO_VISIT = 3;
+var MAX_PAGES_TO_VISIT = Number(arguments[3]);
 
 var pagesVisited = {};
 var numPagesVisited = 0;
@@ -16,7 +18,7 @@ pagesToVisit.push(START_URL);
 crawl();
 
 function crawl() {
-  if(numPagesVisited >= MAX_PAGES_TO_VISIT) {
+  if (numPagesVisited >= MAX_PAGES_TO_VISIT) {
     console.log("Reached max limit of number of pages to visit.");
     return;
   }
@@ -37,23 +39,27 @@ function visitPage(url, callback) {
 
   // Make the request
   console.log("Visiting page " + url);
-  request(url, function(error, response, body) {
-     // Check status code (200 is HTTP OK)
-     console.log("Status code: " + response.statusCode);
-     if(response.statusCode !== 200) {
-       callback();
-       return;
-     }
-     // Parse the document body
-     var $ = cheerio.load(body);
-     var isWordFound = searchForWord($, SEARCH_WORD);
-     if(isWordFound) {
-       console.log('Word ' + SEARCH_WORD + ' found at page ' + url);
-     } else {
-       collectInternalLinks($);
-       // In this short program, our callback is just calling crawl()
-       callback();
-     }
+  request(url, function (error, response, body) {
+    if (error) {
+      console.log("Error: " + error);
+      return;
+    }
+    // Check status code (200 is HTTP OK)
+    console.log("Status code: " + response.statusCode);
+    if (response.statusCode !== 200) {
+      callback();
+      return;
+    }
+    // Parse the document body
+    var $ = cheerio.load(body);
+    var isWordFound = searchForWord($, SEARCH_WORD);
+    if (isWordFound) {
+      console.log('Word ' + SEARCH_WORD + ' found at page ' + url);
+    } else {
+      collectInternalLinks($);
+      // In this short program, our callback is just calling crawl()
+      callback();
+    }
   });
 }
 
@@ -63,9 +69,9 @@ function searchForWord($, word) {
 }
 
 function collectInternalLinks($) {
-    var relativeLinks = $("a[href^='/']");
-    console.log("Found " + relativeLinks.length + " relative links on page");
-    relativeLinks.each(function() {
-        pagesToVisit.push(baseUrl + $(this).attr('href'));
-    });
+  var relativeLinks = $("a[href^='/']");
+  console.log("Found " + relativeLinks.length + " relative links on page");
+  relativeLinks.each(function () {
+    pagesToVisit.push(baseUrl + $(this).attr('href'));
+  });
 }
